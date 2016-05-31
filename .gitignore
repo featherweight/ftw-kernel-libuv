@@ -76,3 +76,6 @@ ipch
 
 # make dist output
 libuv-*.tar.*
+
+# CMake out-of-source build directory
+/build/

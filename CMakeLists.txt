@@ -61,11 +61,7 @@ set (UV_SOURCE_FILES
 
 set (UV_REQUIRED_LIBRARIES "")
 
-if (CMAKE_SYSTEM_NAME MATCHES "Windows")
-    add_definitions (-D_WIN32_WINNT=0x0600)
-    add_definitions (-D_GNU_SOURCE)
-    add_definitions (-D_CRT_SECURE_NO_DEPRECATE)
-    add_definitions (-D_CRT_NONSTDC_NO_DEPRECATE)
+if (WIN32)
     list (APPEND UV_SOURCE_FILES
         include/uv-win.h
         src/win/async.c
@@ -102,7 +98,84 @@ if (CMAKE_SYSTEM_NAME MATCHES "Windows")
         src/win/winsock.c
         src/win/winsock.h
     )
+else ()
+    list (APPEND UV_SOURCE_FILES
+        include/uv-unix.h
+        include/uv-linux.h
+        include/uv-sunos.h
+        include/uv-darwin.h
+        include/uv-bsd.h
+        include/uv-aix.h
+        src/unix/async.c
+        src/unix/atomic-ops.h
+        src/unix/core.c
+        src/unix/dl.c
+        src/unix/fs.c
+        src/unix/getaddrinfo.c
+        src/unix/getnameinfo.c
+        src/unix/internal.h
+        src/unix/loop-watcher.c
+        src/unix/loop.c
+        src/unix/pipe.c
+        src/unix/poll.c
+        src/unix/process.c
+        src/unix/signal.c
+        src/unix/spinlock.h
+        src/unix/stream.c
+        src/unix/tcp.c
+        src/unix/thread.c
+        src/unix/timer.c
+        src/unix/tty.c
+        src/unix/udp.c
+    )
 
+    find_package (Threads REQUIRED)
+
+endif ()
+
+if (CMAKE_SYSTEM_NAME MATCHES "Linux")
+    add_definitions (-D_POSIX_C_SOURCE=200112)
+    add_definitions (-D_GNU_SOURCE)
+    list (APPEND UV_SOURCE_FILES
+        src/unix/linux-core.c
+        src/unix/linux-inotify.c
+        src/unix/linux-syscalls.c
+        src/unix/linux-syscalls.h
+        src/unix/proctitle.c
+    )
+    list (APPEND UV_REQUIRED_LIBRARIES
+        dl
+        rt
+        util
+    )
+elseif (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+    add_definitions (-D_DARWIN_USE_64_BIT_INODE=1)
+    add_definitions (-D_DARWIN_UNLIMITED_SELECT=1)
+    list (APPEND UV_SOURCE_FILES
+        src/unix/darwin.c
+        src/unix/fsevents.c
+        src/unix/darwin-proctitle.c
+        src/unix/pthread-barrier.c
+        src/unix/proctitle.c
+    )
+elseif (CMAKE_SYSTEM_NAME MATCHES "android")
+    list (APPEND UV_SOURCE_FILES
+        src/unix/linux-core.c
+        src/unix/linux-inotify.c
+        src/unix/linux-syscalls.c
+        src/unix/linux-syscalls.h
+        src/unix/pthread-fixes.c
+        src/unix/android-ifaddrs.c
+        src/unix/pthread-barrier.c
+    )
+    list (APPEND UV_REQUIRED_LIBRARIES
+        dl
+    )
+elseif (CMAKE_SYSTEM_NAME MATCHES "Windows")
+    add_definitions (-D_WIN32_WINNT=0x0600)
+    add_definitions (-D_GNU_SOURCE)
+    add_definitions (-D_CRT_SECURE_NO_DEPRECATE)
+    add_definitions (-D_CRT_NONSTDC_NO_DEPRECATE)
     list (APPEND UV_REQUIRED_LIBRARIES
         advapi32
         iphlpapi
@@ -112,6 +185,14 @@ if (CMAKE_SYSTEM_NAME MATCHES "Windows")
         userenv
         ws2_32
     )
+elseif (CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
+
+elseif (CMAKE_SYSTEM_NAME MATCHES "NetBSD")
+
+elseif (CMAKE_SYSTEM_NAME MATCHES "OpenBSD")
+
+elseif (CMAKE_SYSTEM_NAME MATCHES "Solaris|SunOS")
+
 else ()
     message (AUTHOR_WARNING "WARNING: This platform may or may not be supported: ${CMAKE_SYSTEM_NAME}")
 endif ()
@@ -126,10 +207,11 @@ else ()
         SOVERSION "${UV_ABI_VERSION}")
 endif ()
 
-target_include_directories(${PROJECT_NAME} PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
+target_include_directories (${PROJECT_NAME} PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
 )
+target_link_libraries (${PROJECT_NAME} ${UV_REQUIRED_LIBRARIES})
 
 #  Build unit tests.
 if (UV_TEST)
